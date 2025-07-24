@@ -1,0 +1,32 @@
+specVersion: 1.3.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Counter
+    network: optimism-sepolia
+    source:
+      address: "0xF170237160314f5D8526f981b251b56e25347Ed9"
+      abi: Counter
+      startBlock: 30771147
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - CountDecremented
+        - CountIncremented
+        - CountReset
+      abis:
+        - name: Counter
+          file: ./abis/Counter.json
+      eventHandlers:
+        - event: CountDecremented(int256,address)
+          handler: handleCountDecremented
+        - event: CountIncremented(int256,address)
+          handler: handleCountIncremented
+        - event: CountReset(address)
+          handler: handleCountReset
+      file: ./src/counter.ts

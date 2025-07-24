@@ -1,0 +1,25 @@
+type CountDecremented @entity(immutable: true) {
+  id: Bytes!
+  newCount: BigInt! # int256
+  decrementedBy: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CountIncremented @entity(immutable: true) {
+  id: Bytes!
+  newCount: BigInt! # int256
+  incrementedBy: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type CountReset @entity(immutable: true) {
+  id: Bytes!
+  resetBy: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

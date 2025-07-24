@@ -1,0 +1,89 @@
+[
+  { "type": "constructor", "inputs": [], "stateMutability": "nonpayable" },
+  {
+    "name": "CountDecremented",
+    "type": "event",
+    "inputs": [
+      {
+        "name": "newCount",
+        "type": "int256",
+        "indexed": false,
+        "internalType": "int256"
+      },
+      {
+        "name": "decrementedBy",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "name": "CountIncremented",
+    "type": "event",
+    "inputs": [
+      {
+        "name": "newCount",
+        "type": "int256",
+        "indexed": false,
+        "internalType": "int256"
+      },
+      {
+        "name": "incrementedBy",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "name": "CountReset",
+    "type": "event",
+    "inputs": [
+      {
+        "name": "resetBy",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "name": "count",
+    "type": "function",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "int256", "internalType": "int256" }],
+    "stateMutability": "view"
+  },
+  {
+    "name": "decrement",
+    "type": "function",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "name": "getCount",
+    "type": "function",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "int256", "internalType": "int256" }],
+    "stateMutability": "view"
+  },
+  {
+    "name": "increment",
+    "type": "function",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "name": "reset",
+    "type": "function",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]
