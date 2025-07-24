@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "/Users/marcus/Projects/smartcontracttest/smartcontract/contracts/counter.sol": {
-      "lastModificationDate": 1753342009158,
-      "contentHash": "5a48811d72b7d5ee7786f5e3420bd94b",
+      "lastModificationDate": 1753344696639,
+      "contentHash": "cdac5ee96c6ebc28c4c77b6f7fd01cf2",
       "sourceName": "contracts/counter.sol",
       "solcConfig": {
         "version": "0.8.28",

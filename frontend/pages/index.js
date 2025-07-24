@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-// Contract details from your deployment
-const CONTRACT_ADDRESS = '0xb7a66cda5A21E3206f0Cb844b7938790D6aE807c';
+// Contract details from your deployment (updated with events)
+const CONTRACT_ADDRESS = '0xF170237160314f5D8526f981b251b56e25347Ed9';
 const CONTRACT_ABI = [
   {
     "inputs": [],
