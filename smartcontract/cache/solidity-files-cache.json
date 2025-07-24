@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "/Users/marcus/Projects/smartcontracttest/contracts/Lock.sol": {
-      "lastModificationDate": 1753341702133,
+    "/Users/marcus/Projects/smartcontracttest/smartcontract/contracts/counter.sol": {
+      "lastModificationDate": 1753342009158,
       "contentHash": "5a48811d72b7d5ee7786f5e3420bd94b",
-      "sourceName": "contracts/Lock.sol",
+      "sourceName": "contracts/counter.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
