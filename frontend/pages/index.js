@@ -1,115 +1,277 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+// Contract details from your deployment
+const CONTRACT_ADDRESS = '0xb7a66cda5A21E3206f0Cb844b7938790D6aE807c';
+const CONTRACT_ABI = [
+  {
+    "inputs": [],
+    "name": "count",
+    "outputs": [{"internalType": "int256", "name": "", "type": "int256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "decrement",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCount",
+    "outputs": [{"internalType": "int256", "name": "", "type": "int256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "increment",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "reset",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+];
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// OP Sepolia network details
+const OP_SEPOLIA_CHAIN_ID = '0xaa37dc'; // 11155420 in hex
+const OP_SEPOLIA_RPC = 'https://sepolia.optimism.io';
 
 export default function Home() {
+  // State management
+  const [connected, setConnected] = useState(false);
+  const [account, setAccount] = useState('');
+  const [count, setCount] = useState('0');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [contract, setContract] = useState(null);
+
+  // Connect to wallet
+  const connectWallet = async () => {
+    try {
+      if (!window.ethereum) {
+        setError('Please install MetaMask to use this app');
+        return;
+      }
+
+      // Request account access
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts'
+      });
+
+      // Switch to OP Sepolia if not already connected
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: OP_SEPOLIA_CHAIN_ID }],
+        });
+      } catch (switchError) {
+        // Chain doesn't exist, add it
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: OP_SEPOLIA_CHAIN_ID,
+              chainName: 'OP Sepolia Testnet',
+              nativeCurrency: {
+                name: 'Sepolia Ether',
+                symbol: 'ETH',
+                decimals: 18
+              },
+              rpcUrls: [OP_SEPOLIA_RPC],
+              blockExplorerUrls: ['https://sepolia-optimism.etherscan.io/']
+            }]
+          });
+        }
+      }
+
+      // Set up provider and contract
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      setAccount(accounts[0]);
+      setConnected(true);
+      setContract(contractInstance);
+      setError('');
+
+      // Load current count
+      await loadCount(contractInstance);
+
+    } catch (err) {
+      setError(`Connection failed: ${err.message}`);
+    }
+  };
+
+  // Load current count from contract
+  const loadCount = async (contractInstance = contract) => {
+    try {
+      if (!contractInstance) return;
+      
+      const currentCount = await contractInstance.getCount();
+      setCount(currentCount.toString());
+    } catch (err) {
+      setError(`Failed to load count: ${err.message}`);
+    }
+  };
+
+  // Increment counter
+  const incrementCount = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const tx = await contract.increment();
+      await tx.wait(); // Wait for transaction confirmation
+      
+      await loadCount(); // Reload count after transaction
+    } catch (err) {
+      setError(`Transaction failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Decrement counter
+  const decrementCount = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const tx = await contract.decrement();
+      await tx.wait();
+      
+      await loadCount();
+    } catch (err) {
+      setError(`Transaction failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Reset counter
+  const resetCount = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      
+      const tx = await contract.reset();
+      await tx.wait();
+      
+      await loadCount();
+    } catch (err) {
+      setError(`Transaction failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-refresh count every 10 seconds
+  useEffect(() => {
+    if (connected && contract) {
+      const interval = setInterval(() => {
+        loadCount();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [connected, contract]);
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              pages/index.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="min-h-screen bg-gray-50 py-12 px-4">
+      <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">
+          Counter DApp
+        </h1>
+        
+        {/* Connection Status */}
+        {!connected ? (
+          <div className="text-center">
+            <p className="text-gray-600 mb-6">
+              Connect your wallet to interact with the smart contract
+            </p>
+            <button
+              onClick={connectWallet}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        ) : (
+          <div>
+            {/* Account Info */}
+            <div className="bg-gray-100 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-600">Connected Account:</p>
+              <p className="font-mono text-sm break-all">{account}</p>
+              <p className="text-sm text-gray-600 mt-2">Network: OP Sepolia</p>
+            </div>
+
+            {/* Current Count Display */}
+            <div className="text-center mb-8">
+              <div className="bg-blue-50 rounded-lg p-6">
+                <p className="text-gray-600 mb-2">Current Count:</p>
+                <p className="text-4xl font-bold text-blue-600">{count}</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-4">
+              <button
+                onClick={incrementCount}
+                disabled={loading}
+                className="w-full bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+              >
+                {loading ? 'Processing...' : '+ Increment'}
+              </button>
+
+              <button
+                onClick={decrementCount}
+                disabled={loading}
+                className="w-full bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+              >
+                {loading ? 'Processing...' : '- Decrement'}
+              </button>
+
+              <button
+                onClick={resetCount}
+                disabled={loading}
+                className="w-full bg-gray-500 hover:bg-gray-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+              >
+                {loading ? 'Processing...' : '🔄 Reset'}
+              </button>
+
+              <button
+                onClick={loadCount}
+                disabled={loading}
+                className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+              >
+                🔄 Refresh Count
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Contract Info */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
+            Contract Address: {CONTRACT_ADDRESS}
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
