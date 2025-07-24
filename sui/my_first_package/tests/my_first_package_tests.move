@@ -1,18 +1,16 @@
-/*
-#[test_only]
 module my_first_package::my_first_package_tests;
-// uncomment this line to import the module
-// use my_first_package::my_first_package;
-
-const ENotImplemented: u64 = 0;
 
 #[test]
-fun test_my_first_package() {
-    // pass
-}
+fun test_sword_create() {
+    // Create a dummy TxContext for testing
+    let mut ctx = tx_context::dummy();
 
-#[test, expected_failure(abort_code = ::my_first_package::my_first_package_tests::ENotImplemented)]
-fun test_my_first_package_fail() {
-    abort ENotImplemented
+    // Create a sword using the public constructor
+    let sword = my_first_package::example::new_sword(42, 7, &mut ctx);
+
+    // Check if accessor functions return correct values
+    assert!(sword.magic() == 42 && sword.strength() == 7, 1);
+
+    let dummy_address = @0xCAFE;
+    transfer::public_transfer(sword, dummy_address);
 }
-*/

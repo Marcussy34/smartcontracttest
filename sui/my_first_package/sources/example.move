@@ -41,6 +41,15 @@ public fun swords_created(self: &Forge): u64 {
     self.swords_created
 }
 
+// Constructor function for creating swords (useful for testing)
+public fun new_sword(magic: u64, strength: u64, ctx: &mut TxContext): Sword {
+    Sword {
+        id: object::new(ctx),
+        magic,
+        strength,
+    }
+}
+
 // Part 5: Public/entry functions (introduced later in the tutorial)
 
 // Part 6: Tests
