@@ -51,8 +51,10 @@ export default function Home() {
   const [account, setAccount] = useState('');
   const [count, setCount] = useState('0');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [contract, setContract] = useState(null);
+  const [provider, setProvider] = useState(null);
 
   // Connect to wallet
   const connectWallet = async () => {
@@ -94,32 +96,71 @@ export default function Home() {
       }
 
       // Set up provider and contract
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const signer = await provider.getSigner();
+      const web3Provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await web3Provider.getSigner();
       const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      // Also create a read-only provider for better reliability
+      const readOnlyProvider = new ethers.JsonRpcProvider(OP_SEPOLIA_RPC);
+      const readOnlyContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, readOnlyProvider);
 
       setAccount(accounts[0]);
       setConnected(true);
       setContract(contractInstance);
+      setProvider({ signer: web3Provider, readOnly: readOnlyProvider, readOnlyContract });
       setError('');
 
-      // Load current count
-      await loadCount(contractInstance);
+      console.log('Contract connected:', CONTRACT_ADDRESS);
+      console.log('Network:', await web3Provider.getNetwork());
+
+      // Load current count from blockchain
+      await loadCount(readOnlyContract);
 
     } catch (err) {
       setError(`Connection failed: ${err.message}`);
     }
   };
 
-  // Load current count from contract
-  const loadCount = async (contractInstance = contract) => {
+  // Load current count from blockchain
+  const loadCount = async (contractInstance = null) => {
     try {
-      if (!contractInstance) return;
+      setRefreshing(true);
+      setError('');
       
-      const currentCount = await contractInstance.getCount();
+      // Use read-only contract if available, otherwise use the main contract
+      const contractToUse = contractInstance || provider?.readOnlyContract || contract;
+      
+      if (!contractToUse) {
+        setError('Contract not connected');
+        return;
+      }
+
+      console.log('Fetching count from blockchain...');
+      
+      // Call the blockchain to get current count
+      const currentCount = await contractToUse.getCount();
+      console.log('Count from blockchain:', currentCount.toString());
+      
       setCount(currentCount.toString());
+      
+      // Also get it via the public count variable as backup
+      try {
+        const countFromPublicVar = await contractToUse.count();
+        console.log('Count from public variable:', countFromPublicVar.toString());
+        
+        // Verify both methods return the same value
+        if (currentCount.toString() !== countFromPublicVar.toString()) {
+          console.warn('Mismatch between getCount() and count variable');
+        }
+      } catch (backupErr) {
+        console.log('Backup count method failed:', backupErr.message);
+      }
+      
     } catch (err) {
-      setError(`Failed to load count: ${err.message}`);
+      console.error('Failed to load count from blockchain:', err);
+      setError(`Failed to load count from blockchain: ${err.message}`);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -132,7 +173,7 @@ export default function Home() {
       const tx = await contract.increment();
       await tx.wait(); // Wait for transaction confirmation
       
-      await loadCount(); // Reload count after transaction
+      await loadCount(); // Reload count from blockchain after transaction
     } catch (err) {
       setError(`Transaction failed: ${err.message}`);
     } finally {
@@ -149,7 +190,7 @@ export default function Home() {
       const tx = await contract.decrement();
       await tx.wait();
       
-      await loadCount();
+      await loadCount(); // Reload count from blockchain after transaction
     } catch (err) {
       setError(`Transaction failed: ${err.message}`);
     } finally {
@@ -166,7 +207,7 @@ export default function Home() {
       const tx = await contract.reset();
       await tx.wait();
       
-      await loadCount();
+      await loadCount(); // Reload count from blockchain after transaction
     } catch (err) {
       setError(`Transaction failed: ${err.message}`);
     } finally {
@@ -174,15 +215,16 @@ export default function Home() {
     }
   };
 
-  // Auto-refresh count every 10 seconds
+  // Auto-refresh count from blockchain every 15 seconds
   useEffect(() => {
-    if (connected && contract) {
+    if (connected && (contract || provider?.readOnlyContract)) {
       const interval = setInterval(() => {
+        console.log('Auto-refreshing count from blockchain...');
         loadCount();
-      }, 10000);
+      }, 15000);
       return () => clearInterval(interval);
     }
-  }, [connected, contract]);
+  }, [connected, contract, provider]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -214,12 +256,19 @@ export default function Home() {
             </div>
 
             {/* Current Count Display */}
-            <div className="text-center mb-8">
-              <div className="bg-blue-50 rounded-lg p-6">
-                <p className="text-gray-600 mb-2">Current Count:</p>
-                <p className="text-4xl font-bold text-blue-600">{count}</p>
-              </div>
-            </div>
+                         <div className="text-center mb-8">
+               <div className="bg-blue-50 rounded-lg p-6">
+                 <p className="text-gray-600 mb-2">
+                   Current Count {refreshing ? '(Fetching from blockchain...)' : '(From Blockchain)'}:
+                 </p>
+                 <p className="text-4xl font-bold text-blue-600">{count}</p>
+                 {refreshing && (
+                   <div className="mt-2">
+                     <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                   </div>
+                 )}
+               </div>
+             </div>
 
             {/* Action Buttons */}
             <div className="space-y-4">
@@ -247,13 +296,13 @@ export default function Home() {
                 {loading ? 'Processing...' : '🔄 Reset'}
               </button>
 
-              <button
-                onClick={loadCount}
-                disabled={loading}
-                className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
-              >
-                🔄 Refresh Count
-              </button>
+                             <button
+                 onClick={() => loadCount()}
+                 disabled={loading || refreshing}
+                 className="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white font-semibold py-3 px-6 rounded-lg transition duration-200"
+               >
+                 {refreshing ? '🔄 Fetching from Blockchain...' : '🔄 Refresh Count from Blockchain'}
+               </button>
             </div>
           </div>
         )}
